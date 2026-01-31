@@ -15,7 +15,7 @@ class AIService:
     def __init__(self):
         """Initialize the AI service with OpenAI client"""
         self.client = None
-        self.model = "gpt-4-turbo-preview"
+        self.model = "gpt-3.5-turbo"
         self._initialize_client()
     
     def _initialize_client(self):
