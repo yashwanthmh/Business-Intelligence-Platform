@@ -24,7 +24,8 @@ class AIService:
         if api_key:
             try:
                 genai.configure(api_key=api_key)
-                self.model = genai.GenerativeModel('gemini-1.5-flash')
+                # Use gemini-pro which is widely available
+                self.model = genai.GenerativeModel('gemini-2.0-flash')
                 self.configured = True
             except Exception as e:
                 self.configured = False
