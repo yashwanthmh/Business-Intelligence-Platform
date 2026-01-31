@@ -191,9 +191,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Powered by [OpenAI GPT-4](https://openai.com/)
 - Charts by [Plotly](https://plotly.com/)
 
-## 📞 Support
-
-For support, please open an issue on GitHub or contact the development team.
 
 ---
 
