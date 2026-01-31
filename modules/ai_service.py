@@ -1,32 +1,38 @@
 """
-AI Service Module - OpenAI GPT-4 Integration
+AI Service Module - Google Gemini Integration
 Handles all LLM interactions for the platform
 """
 
 import os
-from openai import OpenAI
+import google.generativeai as genai
 from typing import Optional, List, Dict, Any
 import json
 import streamlit as st
 
 class AIService:
-    """Service class for AI-powered analysis and generation"""
+    """Service class for AI-powered analysis and generation using Google Gemini"""
     
     def __init__(self):
-        """Initialize the AI service with OpenAI client"""
-        self.client = None
-        self.model = "gpt-3.5-turbo"
+        """Initialize the AI service with Gemini client"""
+        self.model = None
+        self.configured = False
         self._initialize_client()
     
     def _initialize_client(self):
-        """Initialize OpenAI client with API key"""
-        api_key = os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key")
+        """Initialize Gemini client with API key"""
+        api_key = os.getenv("GOOGLE_API_KEY") or st.session_state.get("google_api_key")
         if api_key:
-            self.client = OpenAI(api_key=api_key)
+            try:
+                genai.configure(api_key=api_key)
+                self.model = genai.GenerativeModel('gemini-1.5-flash')
+                self.configured = True
+            except Exception as e:
+                self.configured = False
+                print(f"Failed to initialize Gemini: {e}")
     
     def is_configured(self) -> bool:
         """Check if the AI service is properly configured"""
-        return self.client is not None
+        return self.configured
     
     def _create_system_prompt(self, context: str) -> str:
         """Create a system prompt based on context"""
@@ -44,10 +50,23 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
         
         return f"{base_prompt}\n\nContext: {context}"
     
+    def _generate_response(self, prompt: str, system_context: str = "") -> str:
+        """Generate a response using Gemini"""
+        if not self.is_configured():
+            raise Exception("AI service not configured. Please add your Google API key in Settings.")
+        
+        full_prompt = f"{system_context}\n\n{prompt}" if system_context else prompt
+        
+        try:
+            response = self.model.generate_content(full_prompt)
+            return response.text
+        except Exception as e:
+            raise Exception(f"Generation failed: {str(e)}")
+    
     def analyze_requirements(self, requirements_text: str, project_context: str = "") -> Dict[str, Any]:
         """Analyze business requirements and generate structured insights"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Google API key in Settings."}
         
         system_prompt = self._create_system_prompt("Requirements Analysis for Manufacturing Projects")
         
@@ -70,39 +89,18 @@ Provide a comprehensive analysis including:
 8. **Estimated Complexity** - Simple/Moderate/Complex for each major requirement
 9. **Recommendations** - Suggested approach and next steps
 
-Format the response as a structured JSON object."""
+Please provide a detailed, well-structured analysis."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=4000
-            )
-            
-            content = response.choices[0].message.content
-            
-            # Try to parse as JSON, fall back to text
-            try:
-                # Clean up potential markdown code blocks
-                if "```json" in content:
-                    content = content.split("```json")[1].split("```")[0]
-                elif "```" in content:
-                    content = content.split("```")[1].split("```")[0]
-                return {"success": True, "analysis": json.loads(content)}
-            except json.JSONDecodeError:
-                return {"success": True, "analysis": content}
-                
+            response = self._generate_response(user_prompt, system_prompt)
+            return {"success": True, "analysis": response}
         except Exception as e:
-            return {"error": f"Analysis failed: {str(e)}"}
+            return {"error": str(e)}
     
     def optimize_process(self, process_description: str, metrics: Dict = None) -> Dict[str, Any]:
         """Analyze and optimize manufacturing processes"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Google API key in Settings."}
         
         system_prompt = self._create_system_prompt("Process Optimization for Advanced Manufacturing")
         
@@ -131,25 +129,15 @@ Provide comprehensive optimization analysis including:
 Provide specific, actionable recommendations with estimated impact percentages where possible."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=4000
-            )
-            
-            return {"success": True, "optimization": response.choices[0].message.content}
-                
+            response = self._generate_response(user_prompt, system_prompt)
+            return {"success": True, "optimization": response}
         except Exception as e:
-            return {"error": f"Optimization analysis failed: {str(e)}"}
+            return {"error": str(e)}
     
     def generate_strategic_plan(self, objectives: str, constraints: str, timeline: str) -> Dict[str, Any]:
         """Generate strategic plans based on objectives and constraints"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Google API key in Settings."}
         
         system_prompt = self._create_system_prompt("Strategic Planning for Manufacturing Innovation")
         
@@ -179,25 +167,15 @@ Generate a detailed strategic plan including:
 Include specific timelines, resource estimates, and measurable targets."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=4000
-            )
-            
-            return {"success": True, "plan": response.choices[0].message.content}
-                
+            response = self._generate_response(user_prompt, system_prompt)
+            return {"success": True, "plan": response}
         except Exception as e:
-            return {"error": f"Strategic planning failed: {str(e)}"}
+            return {"error": str(e)}
     
     def generate_report(self, report_type: str, data: Dict, parameters: Dict = None) -> Dict[str, Any]:
         """Generate various types of business reports"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Google API key in Settings."}
         
         system_prompt = self._create_system_prompt(f"Executive Report Generation - {report_type}")
         
@@ -226,25 +204,15 @@ Create an executive-level report including:
 Use clear, executive-friendly language with specific numbers and actionable insights."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=4000
-            )
-            
-            return {"success": True, "report": response.choices[0].message.content}
-                
+            response = self._generate_response(user_prompt, system_prompt)
+            return {"success": True, "report": response}
         except Exception as e:
-            return {"error": f"Report generation failed: {str(e)}"}
+            return {"error": str(e)}
     
     def decision_analysis(self, decision_context: str, options: List[str], criteria: List[str]) -> Dict[str, Any]:
         """Provide decision support analysis for executive decisions"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Google API key in Settings."}
         
         system_prompt = self._create_system_prompt("Executive Decision Support Analysis")
         
@@ -279,25 +247,15 @@ Provide detailed decision analysis including:
 Be objective, data-driven, and provide clear justification for scores and recommendations."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=4000
-            )
-            
-            return {"success": True, "analysis": response.choices[0].message.content}
-                
+            response = self._generate_response(user_prompt, system_prompt)
+            return {"success": True, "analysis": response}
         except Exception as e:
-            return {"error": f"Decision analysis failed: {str(e)}"}
+            return {"error": str(e)}
     
     def chat(self, message: str, conversation_history: List[Dict] = None) -> Dict[str, Any]:
         """General chat interface for the AI assistant"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Google API key in Settings."}
         
         system_prompt = """You are an expert AI Business Analyst Assistant for a manufacturing innovation organization.
 You help with:
@@ -311,30 +269,24 @@ You help with:
 
 Be helpful, specific, and action-oriented. Use examples from manufacturing and innovation contexts."""
 
-        messages = [{"role": "system", "content": system_prompt}]
-        
+        # Build conversation context
+        context = ""
         if conversation_history:
-            messages.extend(conversation_history)
+            for msg in conversation_history[-10:]:  # Last 10 messages
+                role = msg.get('role', 'user')
+                content = msg.get('content', '')
+                context += f"\n{role.upper()}: {content}"
         
-        messages.append({"role": "user", "content": message})
+        full_prompt = f"{context}\n\nUSER: {message}\n\nASSISTANT:"
         
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=2000
-            )
-            
+            response = self._generate_response(full_prompt, system_prompt)
             return {
                 "success": True, 
-                "response": response.choices[0].message.content,
+                "response": response,
                 "usage": {
-                    "prompt_tokens": response.usage.prompt_tokens,
-                    "completion_tokens": response.usage.completion_tokens,
-                    "total_tokens": response.usage.total_tokens
+                    "model": "gemini-1.5-flash"
                 }
             }
-                
         except Exception as e:
-            return {"error": f"Chat failed: {str(e)}"}
+            return {"error": str(e)}
