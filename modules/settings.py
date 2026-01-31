@@ -14,8 +14,8 @@ class Settings:
     
     def _initialize_session_state(self):
         """Initialize session state for settings"""
-        if 'openai_api_key' not in st.session_state:
-            st.session_state.openai_api_key = os.getenv('OPENAI_API_KEY', '')
+        if 'google_api_key' not in st.session_state:
+            st.session_state.google_api_key = os.getenv('GOOGLE_API_KEY', '')
         if 'organization_name' not in st.session_state:
             st.session_state.organization_name = "Manufacturing Innovation Corp"
         if 'theme' not in st.session_state:
@@ -45,16 +45,23 @@ class Settings:
         st.markdown("### 🔑 API Configuration")
         
         st.markdown("""
-        Configure your OpenAI API key to enable AI-powered features. 
-        Your API key is stored securely in the session and is not persisted.
+        This platform uses **Google Gemini** for AI-powered features.
+        
+        **To get your FREE API key:**
+        1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+        2. Sign in with your Google account
+        3. Click "Create API Key"
+        4. Copy and paste it below
+        
+        ✅ **Gemini is FREE** with generous limits (60 requests/minute)
         """)
         
         st.markdown("---")
         
-        # OpenAI Configuration
-        st.markdown("#### OpenAI API")
+        # Google Gemini Configuration
+        st.markdown("#### Google Gemini API")
         
-        current_key = st.session_state.get('openai_api_key', '')
+        current_key = st.session_state.get('google_api_key', '')
         masked_key = f"{'*' * 20}{current_key[-8:]}" if current_key and len(current_key) > 8 else ""
         
         if current_key:
@@ -63,10 +70,10 @@ class Settings:
             st.warning("⚠️ No API key configured")
         
         new_key = st.text_input(
-            "OpenAI API Key",
+            "Google API Key",
             type="password",
-            placeholder="sk-...",
-            help="Enter your OpenAI API key. Get one at https://platform.openai.com/api-keys"
+            placeholder="AIza...",
+            help="Enter your Google AI API key from https://aistudio.google.com/apikey"
         )
         
         col1, col2 = st.columns(2)
@@ -74,47 +81,46 @@ class Settings:
         with col1:
             if st.button("💾 Save API Key", type="primary", use_container_width=True):
                 if new_key.strip():
-                    if new_key.startswith('sk-'):
-                        st.session_state.openai_api_key = new_key.strip()
-                        st.success("✅ API key saved successfully!")
-                        st.rerun()
-                    else:
-                        st.error("Invalid API key format. OpenAI keys start with 'sk-'")
+                    st.session_state.google_api_key = new_key.strip()
+                    st.success("✅ API key saved successfully!")
+                    st.rerun()
                 else:
                     st.error("Please enter an API key")
         
         with col2:
             if st.button("🗑️ Clear API Key", use_container_width=True):
-                st.session_state.openai_api_key = ''
+                st.session_state.google_api_key = ''
                 st.info("API key cleared")
                 st.rerun()
         
         st.markdown("---")
         
-        # Model settings
-        st.markdown("#### Model Settings")
+        # Test connection button
+        st.markdown("#### Test Connection")
         
-        model = st.selectbox(
-            "GPT Model",
-            ["gpt-4-turbo-preview", "gpt-4", "gpt-3.5-turbo"],
-            help="Select the OpenAI model to use"
-        )
-        
-        temperature = st.slider(
-            "Temperature",
-            0.0, 1.0, 0.7,
-            help="Higher values make output more random, lower values more deterministic"
-        )
+        if st.button("🔍 Test API Connection", type="secondary", use_container_width=True):
+            if st.session_state.get('google_api_key'):
+                try:
+                    import google.generativeai as genai
+                    genai.configure(api_key=st.session_state.google_api_key)
+                    model = genai.GenerativeModel('gemini-2.0-flash')
+                    response = model.generate_content("Say 'Connection successful!' in one line.")
+                    st.success(f"✅ API connection successful!")
+                    st.info(f"🤖 Gemini says: {response.text}")
+                except Exception as e:
+                    st.error(f"❌ Connection failed: {str(e)}")
+            else:
+                st.error("Please enter an API key first.")
         
         st.markdown("---")
         
-        st.markdown("#### API Usage Guidelines")
+        st.markdown("#### Model Information")
         st.info("""
-        **Cost Optimization Tips:**
-        - GPT-4 provides best results but costs more
-        - GPT-3.5-turbo is faster and more economical
-        - Use lower temperature for consistent, factual outputs
-        - Use higher temperature for creative content
+        **Using: Gemini 2.0 Flash**
+        - ⚡ Fast response times
+        - 💰 Free tier: 60 requests/minute
+        - 📝 Large context window
+        - 🎯 Excellent for business analysis
         """)
     
     def _render_organization_settings(self):
@@ -259,6 +265,6 @@ class Settings:
             st.markdown("**Streamlit Version:** 1.30+")
         
         with col2:
-            st.markdown("**AI Model:** GPT-4 Turbo")
+            st.markdown("**AI Model:** Gemini 1.5 Flash")
             st.markdown("**Last Updated:** January 2025")
             st.markdown("**License:** MIT")
