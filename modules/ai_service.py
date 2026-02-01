@@ -1,44 +1,43 @@
 """
-AI Service Module - Google Gemini Integration
+AI Service Module - OpenAI Integration
 Handles all LLM interactions for the platform
 """
 
 import os
 import time
-import google.generativeai as genai
+from openai import OpenAI
 from typing import Optional, List, Dict, Any
 import json
 import streamlit as st
 
 class AIService:
-    """Service class for AI-powered analysis and generation using Google Gemini"""
-    
+    """Service class for AI-powered analysis and generation using OpenAI"""
+
     def __init__(self):
-        """Initialize the AI service with Gemini client"""
-        self.model = None
+        """Initialize the AI service with OpenAI client"""
+        self.client = None
         self.configured = False
+        self.model = "gpt-4o-mini"  # Most cost-effective model
         self._initialize_client()
-    
+
     def _initialize_client(self):
-        """Initialize Gemini client with API key"""
-        api_key = os.getenv("GOOGLE_API_KEY") or st.session_state.get("google_api_key")
+        """Initialize OpenAI client with API key"""
+        api_key = os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key")
         if api_key:
             try:
-                genai.configure(api_key=api_key)
-                # Use gemini-2.0-flash - stable model available on free tier
-                self.model = genai.GenerativeModel('gemini-2.0-flash')
+                self.client = OpenAI(api_key=api_key)
                 self.configured = True
             except Exception as e:
                 self.configured = False
-                print(f"Failed to initialize Gemini: {e}")
-    
+                print(f"Failed to initialize OpenAI: {e}")
+
     def is_configured(self) -> bool:
         """Check if the AI service is properly configured"""
         return self.configured
-    
+
     def _create_system_prompt(self, context: str) -> str:
         """Create a system prompt based on context"""
-        base_prompt = """You are an expert AI Business Analyst and Decision Intelligence Assistant 
+        base_prompt = """You are an expert AI Business Analyst and Decision Intelligence Assistant
 specialized in advanced manufacturing and innovation organizations. You provide:
 
 1. Detailed, actionable business analysis
@@ -49,63 +48,66 @@ specialized in advanced manufacturing and innovation organizations. You provide:
 
 Always structure your responses clearly with sections, bullet points, and priorities.
 Be specific, quantitative where possible, and focused on actionable outcomes."""
-        
+
         return f"{base_prompt}\n\nContext: {context}"
-    
+
     def _generate_response(self, prompt: str, system_context: str = "") -> str:
-        """Generate a response using Gemini with retry logic for rate limits"""
+        """Generate a response using OpenAI with retry logic for rate limits"""
         if not self.is_configured():
-            raise Exception("AI service not configured. Please add your Google API key in Settings.")
+            raise Exception("AI service not configured. Please add your OpenAI API key in Settings.")
 
-        full_prompt = f"{system_context}\n\n{prompt}" if system_context else prompt
+        max_retries = 3
+        base_delay = 2  # seconds
 
-        max_retries = 5
-        base_delay = 5  # seconds
+        messages = []
+        if system_context:
+            messages.append({"role": "system", "content": system_context})
+        messages.append({"role": "user", "content": prompt})
 
         for attempt in range(max_retries):
             try:
-                response = self.model.generate_content(full_prompt)
-                return response.text
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    max_tokens=4096,
+                    temperature=0.7
+                )
+                return response.choices[0].message.content
             except Exception as e:
                 error_str = str(e)
 
-                # Check for rate limit / quota errors (be specific to avoid false positives)
+                # Check for rate limit / quota errors
                 error_lower = error_str.lower()
                 is_quota_error = (
                     "429" in error_str or
                     "quota" in error_lower or
                     "rate limit" in error_lower or
-                    "resource exhausted" in error_lower or
-                    "too many requests" in error_lower
+                    "insufficient_quota" in error_lower
                 )
 
                 if is_quota_error:
                     if attempt < max_retries - 1:
-                        # Exponential backoff: 5s, 10s, 20s, 40s
                         delay = base_delay * (2 ** attempt)
                         time.sleep(delay)
                         continue
                     else:
-                        # Final attempt failed - show actual error for debugging
                         raise Exception(
                             f"API quota exceeded after {max_retries} retries. "
                             f"Original error: {error_str}. "
-                            "Please wait a few minutes before trying again, or upgrade to a paid plan at "
-                            "https://ai.google.dev/gemini-api/docs/billing"
+                            "Please check your OpenAI billing at https://platform.openai.com/account/billing"
                         )
                 else:
-                    # Non-rate-limit error, raise immediately with actual error
                     raise Exception(f"Generation failed: {error_str}")
 
         raise Exception("Generation failed after multiple retries")
-    
+
     def analyze_requirements(self, requirements_text: str, project_context: str = "") -> Dict[str, Any]:
         """Analyze business requirements and generate structured insights"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your Google API key in Settings."}
-        
+            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+
         system_prompt = self._create_system_prompt("Requirements Analysis for Manufacturing Projects")
-        
+
         user_prompt = f"""Analyze the following business requirements for a manufacturing innovation project:
 
 PROJECT CONTEXT:
@@ -132,18 +134,18 @@ Please provide a detailed, well-structured analysis."""
             return {"success": True, "analysis": response}
         except Exception as e:
             return {"error": str(e)}
-    
+
     def optimize_process(self, process_description: str, metrics: Dict = None) -> Dict[str, Any]:
         """Analyze and optimize manufacturing processes"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your Google API key in Settings."}
-        
+            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+
         system_prompt = self._create_system_prompt("Process Optimization for Advanced Manufacturing")
-        
+
         metrics_text = ""
         if metrics:
             metrics_text = f"\nCurrent Metrics:\n{json.dumps(metrics, indent=2)}"
-        
+
         user_prompt = f"""Analyze the following manufacturing process and provide optimization recommendations:
 
 PROCESS DESCRIPTION:
@@ -169,14 +171,14 @@ Provide specific, actionable recommendations with estimated impact percentages w
             return {"success": True, "optimization": response}
         except Exception as e:
             return {"error": str(e)}
-    
+
     def generate_strategic_plan(self, objectives: str, constraints: str, timeline: str) -> Dict[str, Any]:
         """Generate strategic plans based on objectives and constraints"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your Google API key in Settings."}
-        
+            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+
         system_prompt = self._create_system_prompt("Strategic Planning for Manufacturing Innovation")
-        
+
         user_prompt = f"""Create a comprehensive strategic plan for a manufacturing innovation organization:
 
 STRATEGIC OBJECTIVES:
@@ -207,18 +209,18 @@ Include specific timelines, resource estimates, and measurable targets."""
             return {"success": True, "plan": response}
         except Exception as e:
             return {"error": str(e)}
-    
+
     def generate_report(self, report_type: str, data: Dict, parameters: Dict = None) -> Dict[str, Any]:
         """Generate various types of business reports"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your Google API key in Settings."}
-        
+            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+
         system_prompt = self._create_system_prompt(f"Executive Report Generation - {report_type}")
-        
+
         params_text = ""
         if parameters:
             params_text = f"\nReport Parameters:\n{json.dumps(parameters, indent=2)}"
-        
+
         user_prompt = f"""Generate a comprehensive {report_type} report for manufacturing executive leadership:
 
 DATA & CONTEXT:
@@ -244,17 +246,17 @@ Use clear, executive-friendly language with specific numbers and actionable insi
             return {"success": True, "report": response}
         except Exception as e:
             return {"error": str(e)}
-    
+
     def decision_analysis(self, decision_context: str, options: List[str], criteria: List[str]) -> Dict[str, Any]:
         """Provide decision support analysis for executive decisions"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your Google API key in Settings."}
-        
+            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+
         system_prompt = self._create_system_prompt("Executive Decision Support Analysis")
-        
+
         options_text = "\n".join([f"- Option {i+1}: {opt}" for i, opt in enumerate(options)])
         criteria_text = "\n".join([f"- {crit}" for crit in criteria])
-        
+
         user_prompt = f"""Provide comprehensive decision support analysis for the following executive decision:
 
 DECISION CONTEXT:
@@ -287,12 +289,12 @@ Be objective, data-driven, and provide clear justification for scores and recomm
             return {"success": True, "analysis": response}
         except Exception as e:
             return {"error": str(e)}
-    
+
     def chat(self, message: str, conversation_history: List[Dict] = None) -> Dict[str, Any]:
         """General chat interface for the AI assistant"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your Google API key in Settings."}
-        
+            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+
         system_prompt = """You are an expert AI Business Analyst Assistant for a manufacturing innovation organization.
 You help with:
 - Business requirements analysis
@@ -312,16 +314,16 @@ Be helpful, specific, and action-oriented. Use examples from manufacturing and i
                 role = msg.get('role', 'user')
                 content = msg.get('content', '')
                 context += f"\n{role.upper()}: {content}"
-        
+
         full_prompt = f"{context}\n\nUSER: {message}\n\nASSISTANT:"
-        
+
         try:
             response = self._generate_response(full_prompt, system_prompt)
             return {
-                "success": True, 
+                "success": True,
                 "response": response,
                 "usage": {
-                    "model": "gemini-2.0-flash"
+                    "model": self.model
                 }
             }
         except Exception as e:
