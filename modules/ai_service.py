@@ -25,8 +25,8 @@ class AIService:
         if api_key:
             try:
                 genai.configure(api_key=api_key)
-                # Use gemini-1.5-flash which has better free tier quotas
-                self.model = genai.GenerativeModel('gemini-1.5-flash')
+                # Use gemini-2.0-flash-lite for best free tier quotas (higher rate limits)
+                self.model = genai.GenerativeModel('gemini-2.0-flash-lite')
                 self.configured = True
             except Exception as e:
                 self.configured = False
@@ -59,8 +59,8 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
 
         full_prompt = f"{system_context}\n\n{prompt}" if system_context else prompt
 
-        max_retries = 3
-        base_delay = 2  # seconds
+        max_retries = 5
+        base_delay = 5  # seconds
 
         for attempt in range(max_retries):
             try:
@@ -70,9 +70,9 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
                 error_str = str(e)
 
                 # Check for rate limit / quota errors
-                if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
+                if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower() or "resource" in error_str.lower():
                     if attempt < max_retries - 1:
-                        # Exponential backoff: 2s, 4s, 8s
+                        # Exponential backoff: 5s, 10s, 20s, 40s
                         delay = base_delay * (2 ** attempt)
                         time.sleep(delay)
                         continue
@@ -311,7 +311,7 @@ Be helpful, specific, and action-oriented. Use examples from manufacturing and i
                 "success": True, 
                 "response": response,
                 "usage": {
-                    "model": "gemini-1.5-flash"
+                    "model": "gemini-2.0-flash-lite"
                 }
             }
         except Exception as e:
