@@ -25,8 +25,8 @@ class AIService:
         if api_key:
             try:
                 genai.configure(api_key=api_key)
-                # Use gemini-2.0-flash-lite for best free tier quotas (higher rate limits)
-                self.model = genai.GenerativeModel('gemini-2.0-flash-lite')
+                # Use gemini-1.5-flash - stable model with good free tier quotas
+                self.model = genai.GenerativeModel('gemini-1.5-flash')
                 self.configured = True
             except Exception as e:
                 self.configured = False
@@ -69,8 +69,17 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
             except Exception as e:
                 error_str = str(e)
 
-                # Check for rate limit / quota errors
-                if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower() or "resource" in error_str.lower():
+                # Check for rate limit / quota errors (be specific to avoid false positives)
+                error_lower = error_str.lower()
+                is_quota_error = (
+                    "429" in error_str or
+                    "quota" in error_lower or
+                    "rate limit" in error_lower or
+                    "resource exhausted" in error_lower or
+                    "too many requests" in error_lower
+                )
+
+                if is_quota_error:
                     if attempt < max_retries - 1:
                         # Exponential backoff: 5s, 10s, 20s, 40s
                         delay = base_delay * (2 ** attempt)
@@ -84,7 +93,7 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
                             "https://ai.google.dev/gemini-api/docs/billing"
                         )
                 else:
-                    # Non-rate-limit error, raise immediately
+                    # Non-rate-limit error, raise immediately with actual error
                     raise Exception(f"Generation failed: {error_str}")
 
         raise Exception("Generation failed after multiple retries")
@@ -311,7 +320,7 @@ Be helpful, specific, and action-oriented. Use examples from manufacturing and i
                 "success": True, 
                 "response": response,
                 "usage": {
-                    "model": "gemini-2.0-flash-lite"
+                    "model": "gemini-1.5-flash"
                 }
             }
         except Exception as e:
