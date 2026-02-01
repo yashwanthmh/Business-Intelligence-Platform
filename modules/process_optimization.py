@@ -32,7 +32,7 @@ class ProcessOptimizer:
         
         # Check if AI is configured
         if not self.ai_service.is_configured():
-            st.warning("⚠️ OpenAI API key not configured. Please add your API key in Settings to enable AI analysis.")
+            st.warning("⚠️ Groq API key not configured. Please add your API key in Settings to enable AI analysis.")
         
         # Main tabs
         tab1, tab2, tab3, tab4 = st.tabs(["🔍 Process Analysis", "📊 Metrics Dashboard", "📈 Optimization History", "🎯 Benchmarks"])
@@ -168,7 +168,7 @@ class ProcessOptimizer:
                 if not process_description.strip():
                     st.error("Please describe the process to analyze.")
                 elif not self.ai_service.is_configured():
-                    st.error("Please configure your OpenAI API key in Settings first.")
+                    st.error("Please configure your Groq API key in Settings first.")
                 else:
                     metrics = {
                         "cycle_time_min": cycle_time,

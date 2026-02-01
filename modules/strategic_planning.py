@@ -34,7 +34,7 @@ class StrategicPlanner:
         
         # Check if AI is configured
         if not self.ai_service.is_configured():
-            st.warning("⚠️ OpenAI API key not configured. Please add your API key in Settings to enable AI planning.")
+            st.warning("⚠️ Groq API key not configured. Please add your API key in Settings to enable AI planning.")
         
         # Main tabs
         tab1, tab2, tab3, tab4 = st.tabs(["📝 Create Plan", "🗺️ Roadmap View", "📊 Initiative Tracker", "📚 Plan History"])
@@ -200,7 +200,7 @@ Be specific about what you want to achieve...""",
                 if not objectives.strip():
                     st.error("Please define strategic objectives.")
                 elif not self.ai_service.is_configured():
-                    st.error("Please configure your OpenAI API key in Settings first.")
+                    st.error("Please configure your Groq API key in Settings first.")
                 else:
                     self._generate_plan(
                         plan_name=plan_name,

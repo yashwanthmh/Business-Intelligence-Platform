@@ -27,7 +27,7 @@ class AIAssistant:
         st.markdown('<p class="sub-header">Your intelligent business analysis companion</p>', unsafe_allow_html=True)
         
         if not self.ai_service.is_configured():
-            st.warning("⚠️ OpenAI API key not configured. Please add your API key in Settings to chat with AI.")
+            st.warning("⚠️ Groq API key not configured. Please add your API key in Settings to chat with AI.")
         
         # Sidebar for assistant options
         with st.sidebar:
@@ -129,7 +129,7 @@ class AIAssistant:
         if not self.ai_service.is_configured():
             assistant_msg = {
                 'role': 'assistant',
-                'content': "⚠️ I'm not configured yet. Please add your OpenAI API key in the Settings to chat with me.",
+                'content': "⚠️ I'm not configured yet. Please add your Groq API key in the Settings to chat with me.",
                 'timestamp': datetime.now().strftime('%H:%M')
             }
         else:

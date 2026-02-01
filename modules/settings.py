@@ -6,6 +6,7 @@ Application configuration and settings management
 import streamlit as st
 import os
 
+
 class Settings:
     """Settings and Configuration Module"""
 
@@ -14,8 +15,8 @@ class Settings:
 
     def _initialize_session_state(self):
         """Initialize session state for settings"""
-        if 'openai_api_key' not in st.session_state:
-            st.session_state.openai_api_key = os.getenv('OPENAI_API_KEY', '')
+        if 'groq_api_key' not in st.session_state:
+            st.session_state.groq_api_key = os.getenv('GROQ_API_KEY', '')
         if 'organization_name' not in st.session_state:
             st.session_state.organization_name = "Manufacturing Innovation Corp"
         if 'theme' not in st.session_state:
@@ -45,23 +46,23 @@ class Settings:
         st.markdown("### API Configuration")
 
         st.markdown("""
-        This platform uses **OpenAI** for AI-powered features.
+        This platform uses **Groq** for AI-powered features with **Llama 3.1** model.
 
-        **To get your API key:**
-        1. Go to [OpenAI Platform](https://platform.openai.com/api-keys)
+        **To get your FREE API key:**
+        1. Go to [Groq Console](https://console.groq.com/keys)
         2. Sign in or create an account
-        3. Click "Create new secret key"
+        3. Click "Create API Key"
         4. Copy and paste it below
 
-        **Pricing:** GPT-4o-mini is very affordable (~$0.15 per 1M input tokens)
+        **FREE Tier:** 30 requests/minute, 14,400 requests/day
         """)
 
         st.markdown("---")
 
-        # OpenAI Configuration
-        st.markdown("#### OpenAI API")
+        # Groq Configuration
+        st.markdown("#### Groq API")
 
-        current_key = st.session_state.get('openai_api_key', '')
+        current_key = st.session_state.get('groq_api_key', '')
         masked_key = f"{'*' * 20}{current_key[-8:]}" if current_key and len(current_key) > 8 else ""
 
         if current_key:
@@ -70,10 +71,10 @@ class Settings:
             st.warning("No API key configured")
 
         new_key = st.text_input(
-            "OpenAI API Key",
+            "Groq API Key",
             type="password",
-            placeholder="sk-...",
-            help="Enter your OpenAI API key from https://platform.openai.com/api-keys"
+            placeholder="gsk_...",
+            help="Enter your Groq API key from https://console.groq.com/keys"
         )
 
         col1, col2 = st.columns(2)
@@ -81,7 +82,7 @@ class Settings:
         with col1:
             if st.button("Save API Key", type="primary", use_container_width=True):
                 if new_key.strip():
-                    st.session_state.openai_api_key = new_key.strip()
+                    st.session_state.groq_api_key = new_key.strip()
                     st.success("API key saved successfully!")
                     st.rerun()
                 else:
@@ -89,7 +90,7 @@ class Settings:
 
         with col2:
             if st.button("Clear API Key", use_container_width=True):
-                st.session_state.openai_api_key = ''
+                st.session_state.groq_api_key = ''
                 st.info("API key cleared")
                 st.rerun()
 
@@ -99,17 +100,17 @@ class Settings:
         st.markdown("#### Test Connection")
 
         if st.button("Test API Connection", type="secondary", use_container_width=True):
-            if st.session_state.get('openai_api_key'):
+            if st.session_state.get('groq_api_key'):
                 try:
-                    from openai import OpenAI
-                    client = OpenAI(api_key=st.session_state.openai_api_key)
+                    from groq import Groq
+                    client = Groq(api_key=st.session_state.groq_api_key)
                     response = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="llama-3.1-8b-instant",
                         messages=[{"role": "user", "content": "Say 'Connection successful!' in one line."}],
                         max_tokens=50
                     )
                     st.success("API connection successful!")
-                    st.info(f"OpenAI says: {response.choices[0].message.content}")
+                    st.info(f"Llama says: {response.choices[0].message.content}")
                 except Exception as e:
                     st.error(f"Connection failed: {str(e)}")
             else:
@@ -117,14 +118,31 @@ class Settings:
 
         st.markdown("---")
 
+        # Rate limit status
+        st.markdown("#### Rate Limit Status")
+        try:
+            from modules.rate_limiter import rate_limiter
+            status = rate_limiter.get_current_usage()
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Requests Used", f"{status['requests_in_window']}/{status['limit']}")
+            with col2:
+                st.metric("Available", status['available'])
+            with col3:
+                st.metric("Window", f"{status['window_seconds']}s")
+        except Exception:
+            st.info("Rate limit status will appear after first API call")
+
+        st.markdown("---")
+
         st.markdown("#### Model Information")
         st.info("""
-        **Using: GPT-4o-mini**
-        - Fast response times
-        - Very affordable pricing (~$0.15/1M input tokens)
-        - 128K context window
+        **Using: Llama 3.1 8B Instant**
+        - Ultra-fast response times (Groq's LPU technology)
+        - FREE tier: 30 requests/minute, 14,400 requests/day
+        - Built-in rate limiting to prevent quota exceeded errors
         - Excellent for business analysis
-        - Automatic retry with exponential backoff on rate limits
+        - Automatic retry with exponential backoff
         """)
 
     def _render_organization_settings(self):
@@ -269,6 +287,6 @@ class Settings:
             st.markdown("**Streamlit Version:** 1.30+")
 
         with col2:
-            st.markdown("**AI Model:** GPT-4o-mini")
+            st.markdown("**AI Model:** Llama 3.1 8B (Groq)")
             st.markdown("**Last Updated:** February 2026")
             st.markdown("**License:** MIT")

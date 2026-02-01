@@ -1,35 +1,37 @@
 """
-AI Service Module - OpenAI Integration
-Handles all LLM interactions for the platform
+AI Service Module - Groq Integration
+Handles all LLM interactions for the platform with rate limiting
 """
 
 import os
 import time
-from openai import OpenAI
+from groq import Groq
 from typing import Optional, List, Dict, Any
 import json
 import streamlit as st
+from modules.rate_limiter import rate_limiter
+
 
 class AIService:
-    """Service class for AI-powered analysis and generation using OpenAI"""
+    """Service class for AI-powered analysis and generation using Groq"""
 
     def __init__(self):
-        """Initialize the AI service with OpenAI client"""
+        """Initialize the AI service with Groq client"""
         self.client = None
         self.configured = False
-        self.model = "gpt-4o-mini"  # Most cost-effective model
+        self.model = "llama-3.1-8b-instant"  # Fast, free model
         self._initialize_client()
 
     def _initialize_client(self):
-        """Initialize OpenAI client with API key"""
-        api_key = os.getenv("OPENAI_API_KEY") or st.session_state.get("openai_api_key")
+        """Initialize Groq client with API key"""
+        api_key = os.getenv("GROQ_API_KEY") or st.session_state.get("groq_api_key")
         if api_key:
             try:
-                self.client = OpenAI(api_key=api_key)
+                self.client = Groq(api_key=api_key)
                 self.configured = True
             except Exception as e:
                 self.configured = False
-                print(f"Failed to initialize OpenAI: {e}")
+                print(f"Failed to initialize Groq: {e}")
 
     def is_configured(self) -> bool:
         """Check if the AI service is properly configured"""
@@ -52,11 +54,11 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
         return f"{base_prompt}\n\nContext: {context}"
 
     def _generate_response(self, prompt: str, system_context: str = "") -> str:
-        """Generate a response using OpenAI with retry logic for rate limits"""
+        """Generate a response using Groq with rate limiting and retry logic"""
         if not self.is_configured():
-            raise Exception("AI service not configured. Please add your OpenAI API key in Settings.")
+            raise Exception("AI service not configured. Please add your Groq API key in Settings.")
 
-        max_retries = 3
+        max_retries = 5
         base_delay = 2  # seconds
 
         messages = []
@@ -66,6 +68,10 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
 
         for attempt in range(max_retries):
             try:
+                # Wait for rate limit slot (timeout after 120 seconds)
+                if not rate_limiter.acquire(timeout=120):
+                    raise Exception("Rate limit timeout - too many requests. Please try again later.")
+
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
@@ -73,28 +79,31 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
                     temperature=0.7
                 )
                 return response.choices[0].message.content
+
             except Exception as e:
                 error_str = str(e)
 
                 # Check for rate limit / quota errors
                 error_lower = error_str.lower()
-                is_quota_error = (
+                is_rate_error = (
                     "429" in error_str or
+                    "rate" in error_lower or
+                    "limit" in error_lower or
                     "quota" in error_lower or
-                    "rate limit" in error_lower or
-                    "insufficient_quota" in error_lower
+                    "too many" in error_lower
                 )
 
-                if is_quota_error:
+                if is_rate_error:
                     if attempt < max_retries - 1:
-                        delay = base_delay * (2 ** attempt)
+                        # Exponential backoff with longer delays for rate limits
+                        delay = base_delay * (2 ** attempt) + 5  # Extra 5s buffer
                         time.sleep(delay)
                         continue
                     else:
                         raise Exception(
-                            f"API quota exceeded after {max_retries} retries. "
-                            f"Original error: {error_str}. "
-                            "Please check your OpenAI billing at https://platform.openai.com/account/billing"
+                            f"Rate limit exceeded after {max_retries} retries. "
+                            "Groq free tier allows 30 requests/minute. "
+                            "Please wait a moment and try again."
                         )
                 else:
                     raise Exception(f"Generation failed: {error_str}")
@@ -104,7 +113,7 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
     def analyze_requirements(self, requirements_text: str, project_context: str = "") -> Dict[str, Any]:
         """Analyze business requirements and generate structured insights"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Groq API key in Settings."}
 
         system_prompt = self._create_system_prompt("Requirements Analysis for Manufacturing Projects")
 
@@ -138,7 +147,7 @@ Please provide a detailed, well-structured analysis."""
     def optimize_process(self, process_description: str, metrics: Dict = None) -> Dict[str, Any]:
         """Analyze and optimize manufacturing processes"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Groq API key in Settings."}
 
         system_prompt = self._create_system_prompt("Process Optimization for Advanced Manufacturing")
 
@@ -175,7 +184,7 @@ Provide specific, actionable recommendations with estimated impact percentages w
     def generate_strategic_plan(self, objectives: str, constraints: str, timeline: str) -> Dict[str, Any]:
         """Generate strategic plans based on objectives and constraints"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Groq API key in Settings."}
 
         system_prompt = self._create_system_prompt("Strategic Planning for Manufacturing Innovation")
 
@@ -213,7 +222,7 @@ Include specific timelines, resource estimates, and measurable targets."""
     def generate_report(self, report_type: str, data: Dict, parameters: Dict = None) -> Dict[str, Any]:
         """Generate various types of business reports"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Groq API key in Settings."}
 
         system_prompt = self._create_system_prompt(f"Executive Report Generation - {report_type}")
 
@@ -250,7 +259,7 @@ Use clear, executive-friendly language with specific numbers and actionable insi
     def decision_analysis(self, decision_context: str, options: List[str], criteria: List[str]) -> Dict[str, Any]:
         """Provide decision support analysis for executive decisions"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Groq API key in Settings."}
 
         system_prompt = self._create_system_prompt("Executive Decision Support Analysis")
 
@@ -293,7 +302,7 @@ Be objective, data-driven, and provide clear justification for scores and recomm
     def chat(self, message: str, conversation_history: List[Dict] = None) -> Dict[str, Any]:
         """General chat interface for the AI assistant"""
         if not self.is_configured():
-            return {"error": "AI service not configured. Please add your OpenAI API key in Settings."}
+            return {"error": "AI service not configured. Please add your Groq API key in Settings."}
 
         system_prompt = """You are an expert AI Business Analyst Assistant for a manufacturing innovation organization.
 You help with:
@@ -323,8 +332,13 @@ Be helpful, specific, and action-oriented. Use examples from manufacturing and i
                 "success": True,
                 "response": response,
                 "usage": {
-                    "model": self.model
+                    "model": self.model,
+                    "rate_limit": rate_limiter.get_current_usage()
                 }
             }
         except Exception as e:
             return {"error": str(e)}
+
+    def get_rate_limit_status(self) -> Dict[str, Any]:
+        """Get current rate limit status"""
+        return rate_limiter.get_current_usage()
