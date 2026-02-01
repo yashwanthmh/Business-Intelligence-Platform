@@ -53,7 +53,7 @@ class Settings:
         3. Click "Create API Key"
         4. Copy and paste it below
 
-        ✅ **Gemini Pro is FREE** with generous limits (15 requests/minute, 1500/day)
+        ✅ **Gemini 2.0 Flash is FREE** with generous limits (15 requests/minute, 1500/day)
         """)
         
         st.markdown("---")
@@ -103,7 +103,7 @@ class Settings:
                 try:
                     import google.generativeai as genai
                     genai.configure(api_key=st.session_state.google_api_key)
-                    model = genai.GenerativeModel('gemini-pro')
+                    model = genai.GenerativeModel('gemini-2.0-flash')
                     response = model.generate_content("Say 'Connection successful!' in one line.")
                     st.success(f"✅ API connection successful!")
                     st.info(f"🤖 Gemini says: {response.text}")
@@ -116,7 +116,7 @@ class Settings:
         
         st.markdown("#### Model Information")
         st.info("""
-        **Using: Gemini Pro**
+        **Using: Gemini 2.0 Flash**
         - ⚡ Fast response times
         - 💰 Free tier: 15 requests/minute, 1500 requests/day
         - 📝 Large context window
@@ -266,6 +266,6 @@ class Settings:
             st.markdown("**Streamlit Version:** 1.30+")
         
         with col2:
-            st.markdown("**AI Model:** Gemini Pro")
+            st.markdown("**AI Model:** Gemini 2.0 Flash")
             st.markdown("**Last Updated:** January 2025")
             st.markdown("**License:** MIT")

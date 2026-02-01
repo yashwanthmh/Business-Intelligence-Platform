@@ -25,8 +25,8 @@ class AIService:
         if api_key:
             try:
                 genai.configure(api_key=api_key)
-                # Use gemini-pro - widely available model with free tier
-                self.model = genai.GenerativeModel('gemini-pro')
+                # Use gemini-2.0-flash - stable model available on free tier
+                self.model = genai.GenerativeModel('gemini-2.0-flash')
                 self.configured = True
             except Exception as e:
                 self.configured = False
@@ -321,7 +321,7 @@ Be helpful, specific, and action-oriented. Use examples from manufacturing and i
                 "success": True, 
                 "response": response,
                 "usage": {
-                    "model": "gemini-pro"
+                    "model": "gemini-2.0-flash"
                 }
             }
         except Exception as e:
