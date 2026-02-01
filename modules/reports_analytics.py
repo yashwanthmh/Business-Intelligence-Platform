@@ -32,7 +32,7 @@ class ReportsAnalytics:
         st.markdown('<p class="sub-header">AI-generated executive reports and business intelligence</p>', unsafe_allow_html=True)
         
         if not self.ai_service.is_configured():
-            st.warning("⚠️ OpenAI API key not configured. Please add your API key in Settings.")
+            st.warning("⚠️ Groq API key not configured. Please add your API key in Settings.")
         
         tab1, tab2, tab3, tab4 = st.tabs(["📝 Generate Report", "📊 Analytics Dashboard", "📚 Report Library", "📑 Templates"])
         
@@ -118,7 +118,7 @@ class ReportsAnalytics:
         with col2:
             if st.button("📊 Generate Report", type="primary", use_container_width=True):
                 if not self.ai_service.is_configured():
-                    st.error("Please configure your OpenAI API key in Settings.")
+                    st.error("Please configure your Groq API key in Settings.")
                 else:
                     self._generate_report(
                         report_name=report_name, report_type=report_type,

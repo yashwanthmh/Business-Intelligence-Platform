@@ -31,7 +31,7 @@ class DecisionSupport:
         st.markdown('<p class="sub-header">AI-powered analysis for executive decision-making</p>', unsafe_allow_html=True)
         
         if not self.ai_service.is_configured():
-            st.warning("⚠️ OpenAI API key not configured. Please add your API key in Settings.")
+            st.warning("⚠️ Groq API key not configured. Please add your API key in Settings.")
         
         tab1, tab2, tab3 = st.tabs(["🔍 New Decision Analysis", "📊 Decision Matrix", "📚 Decision History"])
         
@@ -140,7 +140,7 @@ class DecisionSupport:
                 elif len(options) < 2:
                     st.error("Please provide at least 2 options.")
                 elif not self.ai_service.is_configured():
-                    st.error("Please configure your OpenAI API key in Settings.")
+                    st.error("Please configure your Groq API key in Settings.")
                 else:
                     self._run_decision_analysis(
                         title=decision_title,

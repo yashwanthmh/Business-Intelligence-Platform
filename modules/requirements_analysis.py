@@ -30,7 +30,7 @@ class RequirementsAnalyzer:
         
         # Check if AI is configured
         if not self.ai_service.is_configured():
-            st.warning("⚠️ OpenAI API key not configured. Please add your API key in Settings to enable AI analysis.")
+            st.warning("Groq API key not configured. Please add your API key in Settings to enable AI analysis.")
         
         # Main tabs
         tab1, tab2, tab3 = st.tabs(["📝 New Analysis", "📚 Analysis History", "📊 Templates"])
@@ -179,7 +179,7 @@ Be as detailed as possible for better AI analysis...""",
                 if not requirements_text.strip():
                     st.error("Please enter requirements to analyze.")
                 elif not self.ai_service.is_configured():
-                    st.error("Please configure your OpenAI API key in Settings first.")
+                    st.error("Please configure your Groq API key in Settings first.")
                 else:
                     self._run_analysis(
                         project_name=project_name,
