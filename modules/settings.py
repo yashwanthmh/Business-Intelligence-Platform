@@ -46,14 +46,14 @@ class Settings:
         
         st.markdown("""
         This platform uses **Google Gemini** for AI-powered features.
-        
+
         **To get your FREE API key:**
         1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
         2. Sign in with your Google account
         3. Click "Create API Key"
         4. Copy and paste it below
-        
-        ✅ **Gemini is FREE** with generous limits (60 requests/minute)
+
+        ✅ **Gemini 1.5 Flash is FREE** with generous limits (15 requests/minute, 1500/day)
         """)
         
         st.markdown("---")
@@ -103,7 +103,7 @@ class Settings:
                 try:
                     import google.generativeai as genai
                     genai.configure(api_key=st.session_state.google_api_key)
-                    model = genai.GenerativeModel('gemini-2.0-flash')
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     response = model.generate_content("Say 'Connection successful!' in one line.")
                     st.success(f"✅ API connection successful!")
                     st.info(f"🤖 Gemini says: {response.text}")
@@ -116,11 +116,12 @@ class Settings:
         
         st.markdown("#### Model Information")
         st.info("""
-        **Using: Gemini 2.0 Flash**
+        **Using: Gemini 1.5 Flash**
         - ⚡ Fast response times
-        - 💰 Free tier: 60 requests/minute
-        - 📝 Large context window
+        - 💰 Free tier: 15 requests/minute, 1500 requests/day
+        - 📝 1 million token context window
         - 🎯 Excellent for business analysis
+        - 🔄 Automatic retry on rate limits
         """)
     
     def _render_organization_settings(self):
