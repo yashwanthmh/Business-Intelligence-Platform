@@ -86,9 +86,10 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
                         time.sleep(delay)
                         continue
                     else:
-                        # Final attempt failed - provide helpful error message
+                        # Final attempt failed - show actual error for debugging
                         raise Exception(
-                            "API quota exceeded. The free tier limit has been reached. "
+                            f"API quota exceeded after {max_retries} retries. "
+                            f"Original error: {error_str}. "
                             "Please wait a few minutes before trying again, or upgrade to a paid plan at "
                             "https://ai.google.dev/gemini-api/docs/billing"
                         )
