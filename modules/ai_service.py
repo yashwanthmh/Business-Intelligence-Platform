@@ -4,6 +4,7 @@ Handles all LLM interactions for the platform
 """
 
 import os
+import time
 import google.generativeai as genai
 from typing import Optional, List, Dict, Any
 import json
@@ -24,8 +25,8 @@ class AIService:
         if api_key:
             try:
                 genai.configure(api_key=api_key)
-                # Use gemini-pro which is widely available
-                self.model = genai.GenerativeModel('gemini-2.0-flash')
+                # Use gemini-1.5-flash which has better free tier quotas
+                self.model = genai.GenerativeModel('gemini-1.5-flash')
                 self.configured = True
             except Exception as e:
                 self.configured = False
@@ -52,17 +53,41 @@ Be specific, quantitative where possible, and focused on actionable outcomes."""
         return f"{base_prompt}\n\nContext: {context}"
     
     def _generate_response(self, prompt: str, system_context: str = "") -> str:
-        """Generate a response using Gemini"""
+        """Generate a response using Gemini with retry logic for rate limits"""
         if not self.is_configured():
             raise Exception("AI service not configured. Please add your Google API key in Settings.")
-        
+
         full_prompt = f"{system_context}\n\n{prompt}" if system_context else prompt
-        
-        try:
-            response = self.model.generate_content(full_prompt)
-            return response.text
-        except Exception as e:
-            raise Exception(f"Generation failed: {str(e)}")
+
+        max_retries = 3
+        base_delay = 2  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                response = self.model.generate_content(full_prompt)
+                return response.text
+            except Exception as e:
+                error_str = str(e)
+
+                # Check for rate limit / quota errors
+                if "429" in error_str or "quota" in error_str.lower() or "rate" in error_str.lower():
+                    if attempt < max_retries - 1:
+                        # Exponential backoff: 2s, 4s, 8s
+                        delay = base_delay * (2 ** attempt)
+                        time.sleep(delay)
+                        continue
+                    else:
+                        # Final attempt failed - provide helpful error message
+                        raise Exception(
+                            "API quota exceeded. The free tier limit has been reached. "
+                            "Please wait a few minutes before trying again, or upgrade to a paid plan at "
+                            "https://ai.google.dev/gemini-api/docs/billing"
+                        )
+                else:
+                    # Non-rate-limit error, raise immediately
+                    raise Exception(f"Generation failed: {error_str}")
+
+        raise Exception("Generation failed after multiple retries")
     
     def analyze_requirements(self, requirements_text: str, project_context: str = "") -> Dict[str, Any]:
         """Analyze business requirements and generate structured insights"""
