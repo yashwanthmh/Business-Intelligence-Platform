@@ -158,6 +158,105 @@ Navigate to Settings → API Configuration and enter your API key.
 - Track initiatives and milestones
 - Manage project portfolios
 
+## ☁️ Deploy to Azure
+
+This project includes full Azure deployment support via Azure App Service (Linux containers), Azure Container Registry, Key Vault, and Bicep infrastructure-as-code.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Azure Resource Group               │
+│                                                     │
+│  ┌──────────────┐   ┌────────────────────────────┐  │
+│  │  Container    │   │  App Service (Linux)       │  │
+│  │  Registry     │──▶│  Docker container          │  │
+│  │  (ACR)        │   │  Streamlit on port 8000    │  │
+│  └──────────────┘   └──────────┬─────────────────┘  │
+│                                │                     │
+│  ┌──────────────┐   ┌─────────▼──────────────────┐  │
+│  │  Key Vault    │   │  Log Analytics Workspace   │  │
+│  │  (secrets)    │   │  (monitoring & logs)        │  │
+│  └──────────────┘   └────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+### Prerequisites
+
+- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) installed
+- An Azure subscription
+- A Groq API key
+
+### Option A: Deploy via CLI (Manual)
+
+**1. Log in to Azure and create a resource group:**
+
+```bash
+az login
+az group create --name mfg-intel-platform-rg --location eastus
+```
+
+**2. Deploy the infrastructure:**
+
+```bash
+az deployment group create \
+  --resource-group mfg-intel-platform-rg \
+  --template-file infra/main.bicep \
+  --parameters groqApiKey=<YOUR_GROQ_API_KEY>
+```
+
+**3. Get the deployment outputs:**
+
+```bash
+az deployment group show \
+  --resource-group mfg-intel-platform-rg \
+  --name main \
+  --query properties.outputs
+```
+
+**4. Build and push the Docker image:**
+
+```bash
+# Get your ACR name from the outputs above
+ACR_NAME=<acr-name-from-outputs>
+
+az acr login --name $ACR_NAME
+docker build -t $ACR_NAME.azurecr.io/mfg-intel-platform:latest .
+docker push $ACR_NAME.azurecr.io/mfg-intel-platform:latest
+```
+
+**5. Restart the Web App to pick up the new image:**
+
+```bash
+WEBAPP_NAME=<webapp-name-from-outputs>
+az webapp restart --name $WEBAPP_NAME --resource-group mfg-intel-platform-rg
+```
+
+### Option B: Deploy via GitHub Actions (CI/CD)
+
+**1. Deploy infrastructure first** using the "Deploy Azure Infrastructure" workflow (manual trigger from the Actions tab).
+
+**2. Set up GitHub repository secrets:**
+
+| Secret | Description |
+|--------|-------------|
+| `AZURE_CLIENT_ID` | Service principal / federated credential client ID |
+| `AZURE_TENANT_ID` | Azure AD tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
+| `ACR_NAME` | Container Registry name (from infra deployment output) |
+| `AZURE_WEBAPP_NAME` | Web App name (from infra deployment output) |
+| `GROQ_API_KEY` | Your Groq API key (used by infra workflow) |
+
+**3. Push to `main`** — the "Build and Deploy to Azure" workflow will automatically build the Docker image and deploy it.
+
+### Local Docker Testing
+
+```bash
+docker build -t mfg-intel-platform .
+docker run -p 8000:8000 -e GROQ_API_KEY=your-key mfg-intel-platform
+# Open http://localhost:8000
+```
+
 ## 🔧 Development
 
 ### Running in Development Mode

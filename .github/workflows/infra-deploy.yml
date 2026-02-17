@@ -1,0 +1,70 @@
+name: Deploy Azure Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      resourceGroup:
+        description: 'Azure Resource Group name'
+        required: true
+        default: 'mfg-intel-platform-rg'
+      location:
+        description: 'Azure region'
+        required: true
+        default: 'eastus'
+      appServicePlanSku:
+        description: 'App Service Plan SKU'
+        required: true
+        default: 'B1'
+        type: choice
+        options:
+          - B1
+          - B2
+          - S1
+          - S2
+          - P1v3
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create Resource Group
+        run: |
+          az group create \
+            --name ${{ github.event.inputs.resourceGroup }} \
+            --location ${{ github.event.inputs.location }}
+
+      - name: Deploy Bicep template
+        run: |
+          az deployment group create \
+            --resource-group ${{ github.event.inputs.resourceGroup }} \
+            --template-file infra/main.bicep \
+            --parameters \
+              appServicePlanSku=${{ github.event.inputs.appServicePlanSku }} \
+              groqApiKey=${{ secrets.GROQ_API_KEY }}
+
+      - name: Show deployment outputs
+        run: |
+          az deployment group show \
+            --resource-group ${{ github.event.inputs.resourceGroup }} \
+            --name main \
+            --query properties.outputs \
+            --output table
+
+      - name: Azure logout
+        run: az logout
+        if: always()
