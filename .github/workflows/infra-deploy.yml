@@ -42,12 +42,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Create Resource Group
-        run: |
-          az group create \
-            --name ${{ github.event.inputs.resourceGroup }} \
-            --location ${{ github.event.inputs.location }}
-
       - name: Deploy Bicep template
         run: |
           az deployment group create \
