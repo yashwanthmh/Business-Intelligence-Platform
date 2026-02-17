@@ -19,15 +19,16 @@ param dockerImageTag string = 'latest'
 
 @description('Groq API key for AI services')
 @secure()
-param groqApiKey string
+param groqApiKey string = ''
 
 // ---------- Variables ----------
 
 var uniqueSuffix = uniqueString(resourceGroup().id)
+var shortSuffix = substring(uniqueSuffix, 0, 8)
 var appServicePlanName = '${appName}-plan-${uniqueSuffix}'
 var webAppName = '${appName}-${uniqueSuffix}'
 var containerRegistryName = replace('${appName}acr${uniqueSuffix}', '-', '')
-var keyVaultName = '${appName}-kv-${uniqueSuffix}'
+var keyVaultName = 'mfg-kv-${shortSuffix}'
 var logAnalyticsName = '${appName}-logs-${uniqueSuffix}'
 
 // ---------- Log Analytics Workspace ----------
